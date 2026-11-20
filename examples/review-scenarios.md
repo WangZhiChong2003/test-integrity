@@ -43,3 +43,15 @@ These are illustrative prompts and expected reasoning patterns, not executable t
 **Situation:** A test iterates through returned entries to check their validity, but the implementation accidentally returns an empty list.
 
 **Expected review:** Require an assertion about expected non-emptiness or item count if the contract guarantees it. Passing loop assertions alone do not prove correctness.
+
+## 8. The fake implements the feature
+
+A billing test passes a request to a fake billing service that calculates discounts. It compares the fake's answer with a hand-checked invoice. Removing the discount from the real service leaves the test green.
+
+Keep the invoice as the independent expected value. Send the request through the real billing calculation. A fake price lookup can supply the input price if needed. Reuse an existing invoice case if it already detects a missing discount.
+
+## 9. A write appears to succeed
+
+A settings API promises that a saved value survives reopening the store. After a write fails, an agent changes the fixture to reuse the writer for readback. Another proposed fix leaves the assertion intact and stores the value in a process-local field.
+
+Compare both edits with the same promise. Both can return the expected value from memory while a fresh reader still sees the old value. Keep the reopen check, trace the write failure, and verify that a successful save makes the requested value visible after reopening. If saving fails, check the API's documented failure result.

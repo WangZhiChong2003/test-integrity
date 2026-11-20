@@ -27,7 +27,7 @@ Before adding or changing a significant test, identify:
 2. **Authority:** Where does the expected result come from (specification, API contract, requirement, standard, independently verified fixture, or domain invariant)?
 3. **Failure mode:** What realistic regression would this test catch?
 4. **Level:** Is a unit, integration, or end-to-end test the least costly reliable level?
-5. **Overlap:** Does an existing test already protect this behavior?
+5. **Overlap:** Does an existing test already protect this behavior? If it catches the target regression, use it to validate the change. Add a case only for a concrete gap.
 
 If the behavior or expected result is unclear, inspect surrounding contracts and usages first. State material uncertainty instead of inventing an assertion.
 
@@ -38,8 +38,8 @@ If the behavior or expected result is unclear, inspect surrounding contracts and
 - Use small, representative fixtures, explicit setup and teardown, and independent test cases.
 - Control randomness, time, ordering, network behavior, and mutable global state when they are not part of the behavior under test.
 - Avoid arbitrary sleeps and tight wall-clock thresholds in ordinary correctness tests. Separate performance tests from functional correctness where appropriate.
-- Mock external boundaries when necessary, but do not mock the behavior whose correctness is being tested.
-- Derive the expected value independently; do not recreate the production algorithm in the test or generate expected outputs from the same implementation being checked.
+- Exercise the production entry point that owns the behavior. A mock or fake can supply an input or dependency failure. Trace the asserted result back to the production decision, especially when a test helper or fake could supply the whole answer.
+- Derive the expected value independently from the contract. Use a hand-checked example, a known-answer fixture, or an invariant that a plausible defect would violate. Copying the algorithm or recording its current output can preserve the same defect on both sides of the assertion.
 - Test realistic boundary and failure cases supported by the actual API and runtime contract. Do not force production code to support imaginary states merely to satisfy a new test.
 - Prefer meaningful assertions to test count, coverage percentage, or snapshot volume.
 
@@ -68,7 +68,7 @@ When a test or CI job fails:
    - **E — Environment/infrastructure:** dependency, configuration, resource, platform, or CI setup issue.
    - **N — Nondeterministic:** race, uncontrolled ordering, timing, or external instability.
    - **U — Unresolved/mixed:** insufficient evidence or multiple contributing causes.
-5. **Fix the verified cause:** Change the smallest appropriate component. Record the reason for changing test expectations.
+5. **Fix the verified cause:** Keep the original failing input, expectation, and observed result available for comparison. Fix the component implicated by the evidence. If further edits would only be guesses, preserve the failing signal and report the evidence still needed.
 6. **Validate:** Rerun the affected test, then the relevant surrounding suite when practical. Report any unrun checks.
 
 A repeat run may help diagnose nondeterminism, but repeated passes must not erase a known failure. Do not treat a failing test as authoritative merely because an agent wrote it.
@@ -77,23 +77,20 @@ For detailed triage patterns, consult [failure diagnosis reference](references/f
 
 ## 5. Protect existing regression coverage
 
-When modifying existing tests:
-
 - Distinguish intentional contract changes from refactoring that should preserve behavior.
 - Preserve valid regression assertions when changing implementation details.
-- Change the expected outcome only when the intended contract changed or the former expectation was demonstrably wrong.
-- Explain any removed assertion, loosened threshold, deleted test, skipped case, or modified fixture that could reduce defect detection.
-- Replace brittle assertions with stronger behavior-level checks rather than simply deleting them.
-- Do not modify product code to conform to a disproven test assumption, and do not weaken a correct test to make CI green.
+- Before changing what the suite accepts, identify the requirement that changed or the independent evidence that the original check was wrong. Apply this to indirect changes too, including fixtures, mocks, snapshots, tolerances, skips, and test selection. The latest output alone cannot justify the edit.
+- Replace a disproven test assumption with a check of the promised behavior. Keep product code free of accommodations for that assumption.
+- Review product edits made in response to a failure even when the tests are untouched. Trace the original input through the normal caller's path to the promised result, side effect, or error. Reject a flag, shadow value, fixture-specific branch, or silent fallback that makes the assertion pass while the caller still experiences the defect.
 
-If both production code and tests change, review whether the test still independently detects the target regression.
+When both sides change, check them separately against the contract. For a regression fix, use the same discriminating case on the old and fixed behavior when practical. For a test correction, identify a still-invalid result the revised check would catch. If the requirement was retired, cite the change that retired it.
 
 ## 6. Finish with a concise evidence report
 
 For relevant test work, report:
 
 - **Contract protected:** What observable behavior was checked.
-- **Test changes:** What was added or changed, and why it is needed.
+- **Test changes:** What was added or changed and why. For a changed expectation, give the old and new outcomes and the independent basis for the change.
 - **Failure diagnosis:** P / T / E / N / U, with a brief explanation when investigating a failure.
 - **Validation:** Exact relevant checks run and whether they passed, failed, or were not run.
 - **Residual risk:** Material unverified behavior, environment limits, or remaining flakiness.

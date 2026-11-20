@@ -16,6 +16,7 @@
 | A bug fix needs a regression test. | Derive the expected result independently from the intended behavior. When practical, verify that the test fails for the intended reason before the fix and passes afterward. |
 | CI reports a failing test. | Reproduce the smallest relevant failure and check the assertion against the intended behavior. Use the evidence to decide whether to fix the product, the test, or the environment. |
 | A legitimate API change updates an assertion. | Trace the new expectation to the authorized behavior change and verify that the remaining assertions still protect against relevant regressions. |
+| A save test passes after a fixture change or a new in-memory flag. | If the API promises persistence, reopen the store through the normal caller's path. Reading back a cached value can hide a failed write. |
 
 ## Quick start
 
