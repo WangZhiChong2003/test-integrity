@@ -55,3 +55,9 @@ Keep the invoice as the independent expected value. Send the request through the
 A settings API promises that a saved value survives reopening the store. After a write fails, an agent changes the fixture to reuse the writer for readback. Another proposed fix leaves the assertion intact and stores the value in a process-local field.
 
 Compare both edits with the same promise. Both can return the expected value from memory while a fresh reader still sees the old value. Keep the reopen check, trace the write failure, and verify that a successful save makes the requested value visible after reopening. If saving fails, check the API's documented failure result.
+
+## 10. A green run misses an existing regression case
+
+A CSV import drops the final row when the file lacks a trailing newline. The default smoke suite passes. The importer suite already has a case that checks the final row through the public import API.
+
+Run that case on the failing version. If it reproduces the missing row, use the same case to validate the fix. A duplicate unit test and a new end-to-end fixture would add maintenance without detecting another defect. If the importer case is skipped, report the gap or run it with its required configuration before claiming the fix was verified.

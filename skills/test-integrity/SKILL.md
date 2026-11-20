@@ -1,6 +1,6 @@
 ---
 name: test-integrity
-description: Design and review software tests that catch regressions, and diagnose test-related failures. Use when adding, changing, or reviewing tests, or investigating failing or flaky tests in local runs or CI. Includes test work identified partway through implementing a feature, fixing a bug, or refactoring.
+description: Decide when a change needs a new regression test, design and review tests, and diagnose failing or flaky tests in local runs or CI. Use when these decisions arise during feature work, bug fixes, or refactoring.
 license: MIT
 ---
 
@@ -15,7 +15,7 @@ Treat production code and test code as independently fallible. A failed test is 
 ## Scope and priority
 
 - Follow the repository's documented requirements, API contracts, and established test conventions.
-- Apply this skill to test design, changes, review, or test-related failure investigation. Tie new tests and suite redesigns to a specific task need.
+- For routine verification, run the relevant existing checks. If they establish the requested behavior, finish there. A one-off probe can answer a diagnostic question. Keep it as a regression test only if it covers a lasting gap or the task requires it.
 - Prefer the smallest useful investigation and validation scope. Increase scope when risk or evidence warrants it.
 - Respect explicit user requirements and security/correctness constraints. Never preserve a faulty test merely because it is old.
 
@@ -27,7 +27,7 @@ Before adding or changing a significant test, identify:
 2. **Authority:** Where does the expected result come from (specification, API contract, requirement, standard, independently verified fixture, or domain invariant)?
 3. **Failure mode:** What realistic regression would this test catch?
 4. **Level:** Is a unit, integration, or end-to-end test the least costly reliable level?
-5. **Overlap:** Does an existing test already protect this behavior? If it catches the target regression, use it to validate the change. Add a case only for a concrete gap.
+5. **Overlap:** Reuse an existing case that would fail for the same defect. If only an input is missing, extend the existing cases. Cover another level when it exposes a distinct risk, such as wiring the wrong implementation into the public entry point.
 
 If the behavior or expected result is unclear, inspect surrounding contracts and usages first. State material uncertainty instead of inventing an assertion.
 
@@ -50,10 +50,9 @@ For examples and review heuristics, consult [test design reference](references/t
 Before accepting a test:
 
 - For a regression fix, run the new test before and after the fix when practical. Confirm that it fails for the intended behavioral reason before the fix and passes afterward.
-- For a straightforward test, identify a realistic regression its assertions would catch and run the relevant tests.
 - Check that the intended assertions execute and that a behavior-preserving refactor should leave the test passing. Watch for empty loops or swallowed exceptions that can let a test pass without checking the behavior.
 - Use a targeted, reversible fault injection or mutation check when the risk warrants stronger evidence and the check is safe and inexpensive. Restore the code after the check.
-- Keep the test only if it adds a meaningful signal or guards a previously missed regression.
+- If work shifts to repairing setup for a proposed test, revisit the gap. Discard your redundant draft if an existing case catches the defect. If the gap is real, use the simplest setup that still exercises it. Follow up on any actual product failure the draft exposed.
 
 ## 4. Diagnose failures before editing
 
@@ -69,7 +68,7 @@ When a test or CI job fails:
    - **N — Nondeterministic:** race, uncontrolled ordering, timing, or external instability.
    - **U — Unresolved/mixed:** insufficient evidence or multiple contributing causes.
 5. **Fix the verified cause:** Keep the original failing input, expectation, and observed result available for comparison. Fix the component implicated by the evidence. If further edits would only be guesses, preserve the failing signal and report the evidence still needed.
-6. **Validate:** Rerun the affected test, then the relevant surrounding suite when practical. Report any unrun checks.
+6. **Validate:** Rerun the affected test, then the relevant surrounding suite when practical. Check the runner's results for the affected case. A successful command can select zero tests, skip the case, or exercise a substitute backend.
 
 A repeat run may help diagnose nondeterminism, but repeated passes must not erase a known failure. Do not treat a failing test as authoritative merely because an agent wrote it.
 
@@ -92,7 +91,7 @@ For relevant test work, report:
 - **Contract protected:** What observable behavior was checked.
 - **Test changes:** What was added or changed and why. For a changed expectation, give the old and new outcomes and the independent basis for the change.
 - **Failure diagnosis:** P / T / E / N / U, with a brief explanation when investigating a failure.
-- **Validation:** Exact relevant checks run and whether they passed, failed, or were not run.
+- **Validation:** Name the checks that ran and the behavior they exercised. Identify any required path left unverified by a filter, skip, or unavailable dependency.
 - **Residual risk:** Material unverified behavior, environment limits, or remaining flakiness.
 
-Keep this report proportionate to the task. Do not claim CI or tests passed unless they actually ran.
+For routine verification a sentence naming the check and its result is enough. Include diagnosis and residual risk when they affect the outcome.

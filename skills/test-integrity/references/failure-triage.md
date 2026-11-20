@@ -21,6 +21,8 @@ Use this guide when the failure origin is disputed or unclear. The labels are an
 5. For a suspected flaky failure, vary only one relevant factor at a time. One or two repeats may be enough to expose nondeterminism, but a passing rerun does not resolve a previous unexplained failure.
 6. When the source is identified, fix the cause and verify both the target test and relevant neighboring behavior.
 
+If a surrounding suite turns up a seemingly unrelated failure, compare the same case and configuration against the unchanged baseline when practical. An identical baseline failure can be reported separately while completing the requested fix. If the baseline is unavailable, leave attribution open. A failure in a different file can still share the changed code path.
+
 ## Common traps
 
 - **"CI failed, so change src":** A test may have an incorrect expectation or invalid fixture.
