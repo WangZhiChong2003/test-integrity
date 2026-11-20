@@ -1,82 +1,108 @@
-# Test Integrity：面向编程智能体的测试可信度 Skill
+# Test Integrity
 
-**测试应该发现真实回归，而不是制造无效失败。**
+[English](README.md) · **简体中文**
 
-`test-integrity` 是一个遵循 [Agent Skills](https://agentskills.io/specification) 规范的轻量级、跨语言、跨测试框架的 Skill，用于约束 Coding Agent 编写和修改测试的方式，并帮助 Agent 合理诊断测试与 CI 失败。
+[![技能结构检查](https://github.com/WangZhiChong2003/test-integrity/actions/workflows/verify.yml/badge.svg)](https://github.com/WangZhiChong2003/test-integrity/actions/workflows/verify.yml)
 
-它重点解决三类问题：
+**帮助编程 Agent 写出能发现真实回归、经得起日常重构的测试。**
 
-1. 测试过度依赖内部实现，正常重构也会导致失败。
-2. Agent 假设测试总是正确，遇到失败就直接修改业务代码。
-3. Agent 为通过 CI 而删除断言、改写预期结果或跳过测试。
+`test-integrity` 适用于 Codex、Pi 和其他兼容的编程 Agent。它指导 Agent 使用项目已有的测试框架设计和审查测试，并排查本地或持续集成（CI）中的测试失败。技能采用 [Agent Skills 规范](https://agentskills.io/specification)。
 
-但这不意味着所有失败都来自测试：真正的功能回归仍然必须被严格捕获。
+## 它会怎样改变测试工作
 
-## 核心理念
+| 场景 | Agent 应该检查什么 |
+| --- | --- |
+| 内部重构后，模拟对象（mock）的调用次数断言失败。 | 核对调用次数是否属于接口承诺。如果契约只规定输出，就检查输出。 |
+| 修复缺陷时需要补一个回归测试。 | 根据预期行为独立推导结果。条件允许时，确认用例在修复前因预期原因失败、修复后通过。 |
+| CI 中有测试失败。 | 运行最小相关用例复现问题，再核对失败断言与预期行为，根据证据判断应修改业务代码、测试还是运行环境。 |
+| 接口的预期行为有意变更，需要更新断言。 | 确认新预期有需求或规范依据，并检查修改后的断言仍能捕捉相关回归。 |
 
-- **行为契约优先**：验证对外承诺的行为，而不是偶然的实现细节。
-- **预期结果独立**：尽量从规范、需求、数学性质或经独立验证的样本得出预期。
-- **先归因再修改**：区分业务代码缺陷（P）、测试缺陷（T）、环境问题（E）、非确定性问题（N）和未明确/混合原因（U）。
-- **维护回归检测能力**：不能只为让 CI 变绿就放宽或删除测试。
-- **避免过度流程**：先运行有针对性的测试，必要时才扩大范围；不强制执行耗时的变异测试。
+## 快速开始
 
-## 安装
+### 1. 安装技能
 
-将仓库里的 `skills/test-integrity/` 整个目录复制到：
-
-- **项目级**：`<项目>/.agents/skills/test-integrity/`
-- **用户级（Codex 与 Pi）**：`~/.agents/skills/test-integrity/`
-
-在 Linux、macOS 或 WSL 中，进入此仓库根目录后执行：
+克隆并进入仓库目录。
 
 ```bash
-mkdir -p ~/.agents/skills
-cp -R skills/test-integrity ~/.agents/skills/
+git clone https://github.com/WangZhiChong2003/test-integrity.git
+cd test-integrity
 ```
 
-Windows PowerShell：
+将 `skills/test-integrity/` 整个目录连同 `references/` 一起复制。Codex 和 Pi 均支持以下两个位置。
+
+| 安装范围 | 目标路径 | 适用场景 |
+| --- | --- | --- |
+| 用户级 | `~/.agents/skills/test-integrity/` | 自己在多个项目中复用同一份技能。 |
+| 项目级 | `<项目>/.agents/skills/test-integrity/` | 团队成员使用同一版本的技能。 |
+
+选择用户级安装时，在本仓库根目录执行对应的命令。
+
+**Linux、macOS 或 WSL**
+
+```bash
+mkdir -p "$HOME/.agents/skills/test-integrity"
+cp -R skills/test-integrity/. "$HOME/.agents/skills/test-integrity/"
+```
+
+**Windows PowerShell**
 
 ```powershell
-New-Item -ItemType Directory -Force "$HOME/.agents/skills" | Out-Null
-Copy-Item -Recurse -Force "./skills/test-integrity" "$HOME/.agents/skills/test-integrity"
+$skillDir = Join-Path $HOME '.agents/skills/test-integrity'
+New-Item -ItemType Directory -Force -Path $skillDir | Out-Null
+Copy-Item -Path './skills/test-integrity/*' -Destination $skillDir -Recurse -Force
 ```
 
-如果 Agent 未发现新 Skill，请重启或重新加载会话。Codex 可显式使用 `$test-integrity`，Pi 可以通过 `/skill:test-integrity` 调用。其他 Agent 的加载路径和命令可能不同。
+### 2. 用一个测试改动试用
 
-## 在日常开发中使用
+用 Agent 打开目标项目，然后显式调用技能。如果找不到技能，新开一个会话，并确认 `SKILL.md` 直接位于安装目录下。
 
-安装后，建议将 `Testing and Validation` 一节合并到目标项目根目录的 `AGENTS.md`。项目已有测试规则时，把相关条目并入现有章节。项目还没有 `AGENTS.md` 时，可以在根目录创建。具体内容见 [推荐的 AGENTS.md 片段](examples/AGENTS.snippet.md)。
+| Agent | 显式调用方式 |
+| --- | --- |
+| Codex | `$test-integrity` |
+| Pi | `/skill:test-integrity` |
 
-项目指令让核心测试规则适用于普通开发任务，并要求 Agent 在新增、修改、审查测试或排查测试失败之前读取已安装的 Skill。即使你只交代“修复这个 bug”，Agent 中途决定补回归测试时，也应按这套规则检查预期结果的依据和测试能捕捉的回归。日常只需运行现有测试时，运行相关用例并报告结果即可。
+调用时可以使用下面的任务试用。
 
-团队共用时，将 `.agents/skills/test-integrity/` 和根目录的 `AGENTS.md` 一起提交到目标项目。个人在多个项目间复用时，可以在用户级安装一份 Skill，再把推荐片段合并到各项目的 `AGENTS.md`。
+> 审查这次改动中的测试。说明每个新测试保护的可观察行为、预期结果的依据，以及它能捕捉的一种实际回归。指出哪些断言可能在行为保持不变的重构后失败。
 
-## 使用示例
+更多提示词和预期分析见 [审查示例](examples/review-scenarios.md)。
 
-> 使用 test-integrity 审查此次提交新增的测试，指出测试预期依据、可能的误报风险以及真实回归检测能力。
+### 3. 接入日常开发
 
-> 测试和 CI 失败了。先用 test-integrity 归因，不要直接修改业务代码或放宽断言。
+**推荐配置**是将 `Testing and Validation` 一节合并到目标项目根目录的 `AGENTS.md`。如果项目已有测试规则，把相关条目合并到现有章节。参见 [推荐的 AGENTS.md 片段](examples/AGENTS.snippet.md)。
 
-> 重构后某个旧测试失败。判断它保护的是功能契约还是内部实现细节，修复真正的原因。
+项目规则要求 Agent 在新增、修改、审查测试或排查测试失败时读取已安装的技能。即使你的请求只是“修复这个 bug”，Agent 中途决定补回归测试时，这条规则也适用。日常验证可以直接运行相关的现有测试并报告结果。技能是否会被自动选中取决于客户端和模型，需要在具体任务中使用完整流程时，可以显式调用。
 
-更多场景见 [审查示例](examples/review-scenarios.md)。
+团队共享时，将 `.agents/skills/test-integrity/` 和根目录的 `AGENTS.md` 一起提交到目标项目。个人使用用户级安装时，把推荐片段合并到需要应用规则的各个项目中。
 
-## 仓库结构与验证
+## 仓库文件索引
 
-完整目录结构、英文说明和仓库管理建议见 [README.md](README.md)。
+| 文件 | 用途 |
+| --- | --- |
+| [`SKILL.md`](skills/test-integrity/SKILL.md) | 技能的触发描述和完整工作流程。 |
+| [测试设计参考](skills/test-integrity/references/test-design.md) | 如何选择断言、测试数据和测试范围。 |
+| [失败诊断参考](skills/test-integrity/references/failure-triage.md) | 如何排查业务代码、测试、运行环境和间歇性失败。 |
+| [AGENTS.md 片段](examples/AGENTS.snippet.md) | 日常开发使用的项目规则。 |
+| [审查示例](examples/review-scenarios.md) | 脆弱测试、真实回归和 CI 失败的分析示例。 |
+
+## 贡献与验证
+
+提出改动时，尽量附上一个现有规则处理不到位的具体场景。参见 [贡献指南](CONTRIBUTING.md)。
+
+可以运行与 CI 相同的结构检查，验证技能元数据和本地引用路径。该脚本无需额外的 Python 依赖。
 
 ```bash
 python3 scripts/check_skill.py
 ```
 
-上面的脚本只进行轻量级结构检查，不是完整 YAML 校验器。可按需额外运行 Agent Skills 官方参考验证器：
+如果已安装 Agent Skills 参考验证器，也可以执行规范检查。
 
 ```bash
 skills-ref validate ./skills/test-integrity
 ```
 
-## 适用边界
+各客户端如何发现技能以及有哪些设置，参见 [Codex 技能文档](https://learn.chatgpt.com/docs/build-skills) 和 [Pi 技能文档](https://docs.pi.dev/latest/skills)。
 
-Skill 不是独立运行的测试框架，不会自动证明测试正确、修好 CI 或强制达到某个覆盖率。不同 Agent 可能不总是自动加载相应 Skill，重要任务建议显式调用。
+## 许可证
 
-项目以 [MIT License](LICENSE) 开源。
+[MIT](LICENSE)
