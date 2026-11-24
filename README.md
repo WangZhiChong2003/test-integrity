@@ -72,7 +72,9 @@ For more prompts and expected reasoning, see [Review scenarios](examples/review-
 
 **Merge `Testing and Validation` into the target project's root `AGENTS.md`.** If the project already has testing rules, add the relevant bullets to that section. Start from the [recommended AGENTS.md snippet](examples/AGENTS.snippet.md).
 
-The project instructions tell the agent to read the installed skill when adding, changing, or reviewing tests or investigating test failures. This applies even when the agent decides to add a regression test midway through a request like “fix this bug.” For routine verification, the agent runs the relevant existing tests and reports the results. Automatic skill selection depends on the client and model, so use the explicit invocation when you want the workflow for a specific task.
+By default, verify the requested change with existing checks or direct inspection. If the only consequence of changing a detail again would be a difference from today's edit, finish there. Unless the user or repository explicitly requires automated coverage, add a permanent check only for a specific failure of a required capability or system invariant that existing tests would miss.
+
+If you previously copied the instruction to use the skill “when deciding whether to add a test,” replace that line when updating the skill. Project or personal instructions are maintained separately from the installed skill folder.
 
 For a shared setup, check in both `.agents/skills/test-integrity/` and the root `AGENTS.md` in the target project. For a user-wide installation, add the snippet to each project where you want the rules to apply.
 

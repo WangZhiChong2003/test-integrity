@@ -1,6 +1,6 @@
 ---
 name: test-integrity
-description: Decide when a change needs a new regression test, design and review tests, and diagnose failing or flaky tests in local runs or CI. Use when these decisions arise during feature work, bug fixes, or refactoring.
+description: Design or review tests when the task calls for test work or a concrete regression risk to a product or system contract needs coverage. Diagnose failing or flaky tests in local runs or CI. Routine edits and verification with existing checks are outside this workflow.
 license: MIT
 ---
 
@@ -12,12 +12,13 @@ Keep tests effective at detecting real regressions without turning valid impleme
 
 Treat production code and test code as independently fallible. A failed test is evidence to investigate, not proof that production code is wrong. A passing test is not proof that its assertions are meaningful.
 
-## Scope and priority
+## When permanent coverage is warranted
 
-- Follow the repository's documented requirements, API contracts, and established test conventions.
-- For routine verification, run the relevant existing checks. If they establish the requested behavior, finish there. A one-off probe can answer a diagnostic question. Keep it as a regression test only if it covers a lasting gap or the task requires it.
-- Prefer the smallest useful investigation and validation scope. Increase scope when risk or evidence warrants it.
-- Respect explicit user requirements and security/correctness constraints. Never preserve a faulty test merely because it is old.
+By default, verify the requested result with existing checks or direct inspection. Follow explicit user or repository requirements for automated coverage.
+
+Before adding coverage on your own, identify a dependency beyond the request to make the edit. What required task would fail, what caller would receive an incorrect result, or what system invariant would be violated if this detail changed again? Ground the consequence in requirements, actual usage, or an observed defect. If the only consequence is that the result would differ from this edit, finish after verification.
+
+Add a permanent case or assertion only when it detects a specific failure of that capability or guarantee that existing cases would miss. Assert the affected outcome and accept every result the contract allows for the same input and conditions.
 
 ## 1. Establish the behavior contract
 
@@ -27,7 +28,7 @@ Before adding or changing a significant test, identify:
 2. **Authority:** Where does the expected result come from (specification, API contract, requirement, standard, independently verified fixture, or domain invariant)?
 3. **Failure mode:** What realistic regression would this test catch?
 4. **Level:** Is a unit, integration, or end-to-end test the least costly reliable level?
-5. **Overlap:** Reuse an existing case that would fail for the same defect. If only an input is missing, extend the existing cases. Cover another level when it exposes a distinct risk, such as wiring the wrong implementation into the public entry point.
+5. **Overlap:** Reuse an existing case that would fail for the same defect. When a different input exposes an uncovered failure, extend the relevant case. Cover another level when it exposes a distinct risk, such as wiring the wrong implementation into the public entry point.
 
 If the behavior or expected result is unclear, inspect surrounding contracts and usages first. State material uncertainty instead of inventing an assertion.
 
@@ -79,7 +80,7 @@ For detailed triage patterns, consult [failure diagnosis reference](references/f
 - Distinguish intentional contract changes from refactoring that should preserve behavior.
 - Preserve valid regression assertions when changing implementation details.
 - Before changing what the suite accepts, identify the requirement that changed or the independent evidence that the original check was wrong. Apply this to indirect changes too, including fixtures, mocks, snapshots, tolerances, skips, and test selection. The latest output alone cannot justify the edit.
-- Replace a disproven test assumption with a check of the promised behavior. Keep product code free of accommodations for that assumption.
+- When an allowed design change breaks several tests, find the common assumption before updating expectations. Once the promised behavior is covered, remove assertions that enforce a disproven assumption. One existing behavioral check may already be sufficient.
 - Review product edits made in response to a failure even when the tests are untouched. Trace the original input through the normal caller's path to the promised result, side effect, or error. Reject a flag, shadow value, fixture-specific branch, or silent fallback that makes the assertion pass while the caller still experiences the defect.
 
 When both sides change, check them separately against the contract. For a regression fix, use the same discriminating case on the old and fixed behavior when practical. For a test correction, identify a still-invalid result the revised check would catch. If the requirement was retired, cite the change that retired it.
